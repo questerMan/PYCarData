@@ -8,6 +8,7 @@ Created on Mon Jul 15 09:05:23 2019
 import pandas as pd
 import numpy as np
 import os
+import datetime
 
 #定义生成的文件名
 collectName = 'collectData.xlsx'
@@ -93,7 +94,7 @@ dic1 = {
         '已付费用':'',
         '已付押金费用':'',
         '订单来源':'',
-        '待定':'',
+        '整理还车时间':'',
         '项目':give_ProjectName(collectData1,projectName1),
         '区域':'',
         '城市':'',
@@ -141,7 +142,7 @@ dic2 = {
         '已付费用':collectData2['已付费用'],
         '已付押金费用':collectData2['已付押金费用'],
         '订单来源':collectData2['订单来源'],
-        '待定':'',
+        '整理还车时间':'',
         '项目':give_ProjectName(collectData2,projectName2),
         '区域':'',
         '城市':'',
@@ -224,6 +225,7 @@ def washData(DataFrame):
     res_dataIndex(DataFrame_wash1)
     
     for index,row in DataFrame_wash1.iterrows():
+       
         #添加区域信息
         QU_Name = find_Value(row['店名'],dic_Base,2)
         DataFrame_wash1.at[index,'区域'] = QU_Name
@@ -246,6 +248,16 @@ def washData(DataFrame):
         YWY_Name = find_Value(row['业务员'],dic_YWYBase,0)
         DataFrame_wash1.at[index,'组别'] = YWY_Name
         #print('{}--3--{}'.format(index,row['组别']))
+        
+        if pd.isnull(row['还车时间']) != True :
+            HC_Time = np.datetime64(row['还车时间']).astype(datetime.datetime)
+            QC_Time = np.datetime64(row['取车时间']).astype(datetime.datetime)
+
+            #整理还车时间
+            if int(row['租用时长']) == 1:
+                DataFrame_wash1.at[index,'整理还车时间'] = QC_Time
+            else:
+                DataFrame_wash1.at[index,'整理还车时间'] = HC_Time - datetime.timedelta(days=1) 
     
     return res_dataIndex(DataFrame_wash1)
 
@@ -258,10 +270,51 @@ df = pd.read_excel('/Users/lixingongsi/Desktop/PYCarData/运营数据/'+collectN
 print(df.info())
 '''
 总数据：
-订单租赁天数、订单平摊营收、
+租赁天数、平摊营收、
 日数据：
 新增订单、预约单、长租单、总订单、租赁状态（正在出租、预约订单、已结束单、未来订单）、平摊营收
 月数据：
 新增订单、预约单、长租单、总订单、订单租赁天数、平摊营收
 
 '''
+def getAllData(dataFrame,setTime = '2019-07-08'):
+    #添加列
+    dataFrame['日新增订单'] = '' 
+    dataFrame['日长租单'] = ''
+    dataFrame['日租赁状态'] = ''
+    dataFrame['日平摊营收'] = ''
+    #print(dataFrame)
+    
+    for index,row in dataFrame.iterrows():
+         #获取平摊营收金额
+        indentMoney = row['全部费用']
+        indentDays = row['租用时长']
+        avrMoney = round(indentMoney/indentDays,2)
+        dataFrame.at[index,'日平摊营收'] = avrMoney
+        #找出日长租单和日短租单
+        if int(row['租用时长']) >= 30:
+            dataFrame.at[index,'日长租单'] = '长租单'
+        else:
+            dataFrame.at[index,'日长租单'] = '短租单'
+        #当前设定时间
+        set_Time= datetime.datetime.strptime(setTime, '%Y-%m-%d')
+        #下单日期datetime.datetime.fromtimestamp
+        XD_Time = np.datetime64(row['下单日期']).astype(datetime.datetime)
+        
+        rs = (set_Time - XD_Time).days
+        
+        if rs == 0:
+            dataFrame.at[index,'日新增订单'] = '是'
+        
+        if pd.isnull(row['取车时间']) == True :
+            if rs >= 0:
+                dataFrame.at[index,'日租赁状态'] = '预订单'
+            else:
+                dataFrame.at[index,'日租赁状态'] = '未来单'
+        
+        if rs < 0:
+            dataFrame.at[index,'日租赁状态'] = '未来单'
+      
+            
+        
+#getAllData(newResultCollect_DataFrame)  
