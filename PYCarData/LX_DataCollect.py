@@ -286,12 +286,12 @@ def getAllData(dataFrame,setTime = '2019-07-08'):
     #print(dataFrame)
     
     for index,row in dataFrame.iterrows():
-         #获取平摊营收金额
+         #获取平摊营收金额********
         indentMoney = row['全部费用']
         indentDays = row['租用时长']
         avrMoney = round(indentMoney/indentDays,2)
         dataFrame.at[index,'日平摊营收'] = avrMoney
-        #找出日长租单和日短租单
+        #找出日长租单和日短租单********
         if int(row['租用时长']) >= 30:
             dataFrame.at[index,'日长租单'] = '长租单'
         else:
